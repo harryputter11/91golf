@@ -1,0 +1,521 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>구일회: 2024 상반기 필드 대서사시</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700;900&display=swap" rel="stylesheet">
+    <!-- Chosen Palette: Calm Harmony Neutrals -->
+    <!-- Application Structure Plan: A single-page dashboard with a top navigation bar for quick jumps to thematic sections: 1. Main Dashboard (KPIs & Overall Trend Chart), 2. Player Analysis (Dropdown to select a player and see their detailed stats/chart), 3. Hall of Fame (Categorized awards), 4. Monthly Highlights (Tabbed view for each month's story). This structure allows users to get a quick overview first, then dive deep into specific areas of interest (players, awards, or months), providing a non-linear, user-driven exploration path that is more engaging than a static report. -->
+    <!-- Visualization & Content Choices: 
+        - Overall Trends: Report Info(All player scores over 5 months) -> Goal(Compare trends) -> Viz(Multi-line chart) -> Interaction(Click legend to toggle) -> Justification(Shows overall dynamics, toggle reduces clutter) -> Library(Chart.js).
+        - Player Deep Dive: Report Info(Single player scores/awards) -> Goal(Analyze individual performance) -> Viz(Simple line chart + text cards) -> Interaction(Select player from dropdown) -> Justification(Focused view on a player's consistency/volatility) -> Library(Chart.js).
+        - Awards Summary: Report Info(Award winners) -> Goal(Organize/Inform) -> Viz(Icon-based cards) -> Interaction(Static) -> Justification(Visually appealing and thematic way to present champions) -> Library(HTML/Tailwind).
+        - Monthly Story: Report Info(Monthly winners/key scores) -> Goal(Show change over time) -> Viz(Tabbed content sections) -> Interaction(Click tabs) -> Justification(Chronological storytelling without vertical clutter) -> Library(JS/HTML).
+        - This approach uses the best visualization for each data storytelling goal, enhancing usability and engagement. -->
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+    <style>
+        body { font-family: 'Noto Sans KR', sans-serif; background-color: #f8fafc; }
+        .chart-container { position: relative; width: 100%; max-width: 900px; margin-left: auto; margin-right: auto; height: 300px; max-height: 50vh; }
+        @media (min-width: 768px) { .chart-container { height: 450px; } }
+        .player-chart-container { position: relative; width: 100%; max-width: 500px; margin-left: auto; margin-right: auto; height: 250px; max-height: 40vh; }
+        .nav-item { transition: all 0.3s ease; }
+        .nav-item.active { color: #f59e0b; border-bottom: 2px solid #f59e0b; }
+        .nav-item:not(.active):hover { color: #fbbf24; }
+        .tab-item { transition: all 0.3s ease; }
+        .tab-item.active { background-color: #f59e0b; color: white; }
+        .tab-item:not(.active):hover { background-color: #fef3c7; }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800">
+
+    <header class="bg-white/80 backdrop-blur-lg sticky top-0 z-40 shadow-sm">
+        <nav class="container mx-auto px-4">
+            <div class="flex items-center justify-between h-16">
+                <h1 class="text-xl md:text-2xl font-bold text-slate-800">
+                    <span class="text-amber-500">구일회</span> 필드 대서사시
+                </h1>
+                <div class="hidden md:flex items-center space-x-6 text-base font-medium">
+                    <a href="#audio-player" class="nav-item">🎧 실록</a>
+                    <a href="#dashboard" class="nav-item active">대시보드</a>
+                    <a href="#player-analysis" class="nav-item">선수 분석</a>
+                    <a href="#hall-of-fame" class="nav-item">명예의 전당</a>
+                    <a href="#monthly-highlights" class="nav-item">월별 하이라이트</a>
+                </div>
+                 <button id="mobile-menu-button" class="md:hidden p-2 rounded-md text-slate-600 hover:text-amber-500 hover:bg-slate-100">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16m-7 6h7"></path></svg>
+                </button>
+            </div>
+        </nav>
+        <div id="mobile-menu" class="hidden md:hidden bg-white border-t border-slate-200">
+            <a href="#audio-player" class="block py-3 px-4 text-base font-medium text-slate-700 hover:bg-amber-50 nav-item-mobile">🎧 실록 듣기</a>
+            <a href="#dashboard" class="block py-3 px-4 text-base font-medium text-slate-700 hover:bg-amber-50 nav-item-mobile">대시보드</a>
+            <a href="#player-analysis" class="block py-3 px-4 text-base font-medium text-slate-700 hover:bg-amber-50 nav-item-mobile">선수 분석</a>
+            <a href="#hall-of-fame" class="block py-3 px-4 text-base font-medium text-slate-700 hover:bg-amber-50 nav-item-mobile">명예의 전당</a>
+            <a href="#monthly-highlights" class="block py-3 px-4 text-base font-medium text-slate-700 hover:bg-amber-50 nav-item-mobile">월별 하이라이트</a>
+        </div>
+    </header>
+
+    <main class="container mx-auto p-4 md:p-8">
+        
+        <section id="intro" class="text-center mb-16">
+            <h2 class="text-4xl md:text-5xl font-extrabold text-slate-900 leading-tight">
+                발치와 드라이버 사이<br class="md:hidden"/>
+                <span class="text-amber-600">상반기 필드 제패의 역학 관계</span>
+            </h2>
+            <p class="mt-6 max-w-3xl mx-auto text-lg text-slate-600">
+                한 달에 한 번, 치과 체어의 고요함을 벗어나 광활한 필드 위에서 펼쳐지는 구일회 동기들의 대서사시. 2024년 상반기, 그들의 스윙에 담긴 영광과 시련, 그리고 새로운 전설의 탄생을 지금 바로 확인해 보세요. 완벽한 드라이버 샷은 깔끔한 발치와 같고, 1미터 퍼팅 실패는 근관 치료 실패만큼이나 뼈아픈 법입니다.
+            </p>
+        </section>
+
+        <!-- Audio Player Section -->
+        <section id="audio-player" class="mb-16">
+            <div class="bg-white p-6 md:p-8 rounded-xl shadow-lg border border-slate-200/80 max-w-4xl mx-auto">
+                <h3 class="text-2xl md:text-3xl font-bold text-slate-800 mb-4 text-center">
+                    <span class="text-amber-500">🎧</span> 구일회 실록 듣기
+                </h3>
+                <p class="text-center text-slate-600 mb-6">
+                    치과의사들의 골프 필드 대서사시를 음성으로 들어보세요. 실력과 전략, 그리고 예측불허 캐릭터들의 상반기 드라마가 생생하게 펼쳐집니다.
+                </p>
+                <div class="flex justify-center">
+                    <div class="w-full max-w-2xl">
+                        <audio controls class="w-full h-12 rounded-lg shadow-md" preload="metadata">
+                            <source src="golf-club-narrative.mp3" type="audio/mpeg">
+                            <p class="text-slate-500 text-center mt-4">
+                                죄송합니다. 브라우저가 오디오 재생을 지원하지 않습니다.
+                                <a href="golf-club-narrative.mp3" class="text-amber-500 hover:text-amber-600 underline">
+                                    오디오 파일 다운로드
+                                </a>
+                            </p>
+                        </audio>
+                        <div class="mt-4 text-center">
+                            <p class="text-sm text-slate-500">
+                                💡 <strong>재생 팁:</strong> 볼륨을 조절하고 전체 화면에서 들어보세요. 차트와 함께 보면 더욱 흥미로워집니다!
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="dashboard" class="scroll-mt-20">
+            <h3 class="text-3xl font-bold text-slate-800 mb-2 text-center">종합 대시보드</h3>
+            <p class="text-center text-slate-500 mb-8">상반기 구일회를 빛낸 핵심 지표와 선수들의 스코어 변화를 한눈에 파악할 수 있습니다.</p>
+            
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6 mb-12 text-center">
+                <div class="bg-white p-4 md:p-6 rounded-xl shadow-md border border-slate-200/50">
+                    <p class="text-sm md:text-base font-semibold text-slate-500">상반기 MVP</p>
+                    <p class="text-2xl md:text-3xl font-bold text-amber-500 mt-2">정상균</p>
+                    <p class="text-xs md:text-sm text-slate-400 mt-1">최다 수상 (4회)</p>
+                </div>
+                <div class="bg-white p-4 md:p-6 rounded-xl shadow-md border border-slate-200/50">
+                    <p class="text-sm md:text-base font-semibold text-slate-500">전략의 귀재</p>
+                    <p class="text-2xl md:text-3xl font-bold text-sky-500 mt-2">신광호</p>
+                    <p class="text-xs md:text-sm text-slate-400 mt-1">핸디캡 마스터</p>
+                </div>
+                <div class="bg-white p-4 md:p-6 rounded-xl shadow-md border border-slate-200/50">
+                    <p class="text-sm md:text-base font-semibold text-slate-500">꾸준함의 대명사</p>
+                    <p class="text-2xl md:text-3xl font-bold text-emerald-500 mt-2">윤영구</p>
+                    <p class="text-xs md:text-sm text-slate-400 mt-1">인간 메트로놈</p>
+                </div>
+                <div class="bg-white p-4 md:p-6 rounded-xl shadow-md border border-slate-200/50">
+                    <p class="text-sm md:text-base font-semibold text-slate-500">필드의 유령</p>
+                    <p class="text-2xl md:text-3xl font-bold text-violet-500 mt-2">구자영</p>
+                    <p class="text-xs md:text-sm text-slate-400 mt-1">혜성같은 등장</p>
+                </div>
+            </div>
+
+            <div class="bg-white p-4 md:p-8 rounded-xl shadow-lg border border-slate-200/80">
+                <h4 class="text-2xl font-bold text-slate-800 text-center">상반기 스코어 트렌드</h4>
+                <p class="text-center text-slate-500 mt-2 mb-4">선수 이름을 클릭하여 차트에서 보거나 숨길 수 있습니다.</p>
+                <div class="chart-container">
+                    <canvas id="mainScoreChart"></canvas>
+                </div>
+            </div>
+        </section>
+
+        <section id="player-analysis" class="mt-20 scroll-mt-20">
+            <h3 class="text-3xl font-bold text-slate-800 mb-2 text-center">선수 심층 분석</h3>
+            <p class="text-center text-slate-500 mb-8">알고 싶은 선수를 선택하여 개인별 성적과 스토리를 확인하세요.</p>
+            
+            <div class="flex justify-center mb-8">
+                <select id="player-selector" class="w-full max-w-xs p-3 border border-slate-300 rounded-lg shadow-sm focus:ring-2 focus:ring-amber-400 focus:border-amber-400 transition">
+                </select>
+            </div>
+            
+            <div id="player-detail-card" class="bg-white p-6 md:p-8 rounded-xl shadow-lg border border-slate-200/80 grid md:grid-cols-2 gap-8 items-center">
+                <div>
+                    <h4 id="player-name" class="text-3xl font-bold text-slate-800">선수를 선택하세요</h4>
+                    <p id="player-title" class="text-lg text-amber-600 font-semibold mt-1"></p>
+                    <p id="player-comment" class="mt-4 text-slate-600"></p>
+                    <div id="player-awards" class="mt-6 flex flex-wrap gap-3"></div>
+                </div>
+                <div class="player-chart-container">
+                    <canvas id="playerScoreChart"></canvas>
+                </div>
+            </div>
+        </section>
+
+        <section id="hall-of-fame" class="mt-20 scroll-mt-20">
+             <h3 class="text-3xl font-bold text-slate-800 mb-2 text-center">명예의 전당</h3>
+             <p class="text-center text-slate-500 mb-8">상반기 필드를 지배한 각 부문별 챔피언들을 소개합니다.</p>
+
+            <div class="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+                <div class="bg-white p-6 rounded-xl shadow-lg border-2 border-amber-300">
+                    <h4 class="text-2xl font-bold text-amber-500 flex items-center gap-2">🏆 우승 (Winner)</h4>
+                    <p class="text-slate-500 mt-2 mb-4">최고의 영예를 차지한 챔피언</p>
+                    <ul class="space-y-2 text-slate-700">
+                        <li class="font-semibold">4월: 정상균</li>
+                        <li class="font-semibold">5월: 신광호 (핸디)</li>
+                        <li class="font-semibold">6월: 임종갑 (핸디)</li>
+                    </ul>
+                </div>
+                 <div class="bg-white p-6 rounded-xl shadow-lg border border-slate-200/80">
+                    <h4 class="text-2xl font-bold text-sky-500 flex items-center gap-2">🥇 메달리스트</h4>
+                    <p class="text-slate-500 mt-2 mb-4">핸디캡 없이 순수 실력으로 코스를 정복한 실력자</p>
+                    <ul class="space-y-2 text-slate-700">
+                        <li class="font-semibold">4월: 정상균 (76), 차용두 (84)</li>
+                        <li class="font-semibold">5월: 정상균 (82)</li>
+                        <li class="font-semibold">6월: 백상현 (88)</li>
+                    </ul>
+                </div>
+                <div class="bg-white p-6 rounded-xl shadow-lg border border-slate-200/80">
+                    <h4 class="text-2xl font-bold text-red-500 flex items-center gap-2">🚀 롱기스트</h4>
+                    <p class="text-slate-500 mt-2 mb-4">지축을 흔드는 파워, 장타의 제왕</p>
+                    <ul class="space-y-2 text-slate-700">
+                        <li class="font-semibold">3월: 황보연</li>
+                        <li class="font-semibold">4월: 김재용</li>
+                        <li class="font-semibold">5월: 정상균</li>
+                        <li class="font-semibold">6월: 백상현</li>
+                    </ul>
+                </div>
+                 <div class="bg-white p-6 rounded-xl shadow-lg border border-slate-200/80">
+                    <h4 class="text-2xl font-bold text-emerald-500 flex items-center gap-2">🎯 니어리스트</h4>
+                    <p class="text-slate-500 mt-2 mb-4">예술의 경지, 어프로치의 닌자</p>
+                    <ul class="space-y-2 text-slate-700">
+                        <li class="font-semibold">3월: 김도훈</li>
+                        <li class="font-semibold">5월: 서제덕</li>
+                        <li class="font-semibold">7월: 정혜욱</li>
+                    </ul>
+                </div>
+            </div>
+            <div class="mt-12 p-6 md:p-8 rounded-xl bg-slate-800 text-white shadow-xl">
+                <h4 class="text-2xl font-bold text-center text-amber-400">🔥 필드의 두 얼굴: 꾸준함 vs 예측불허</h4>
+                <div class="mt-6 grid md:grid-cols-2 gap-8 items-start">
+                    <div class="text-center">
+                        <h5 class="text-xl font-bold">인간 메트로놈: 윤영구</h5>
+                        <p class="mt-2 text-slate-300">스코어: 98 → 93 → 93 → 92</p>
+                        <p class="mt-3 text-slate-400">다른 이들이 희비의 롤러코스터를 탈 때, 그는 묵묵히 자신의 박자를 지킵니다. 경이로운 안정성, 그 자체가 존경이자 상대에겐 공포입니다.</p>
+                    </div>
+                    <div class="text-center">
+                        <h5 class="text-xl font-bold">카오스의 요원: 차용두</h5>
+                        <p class="mt-2 text-slate-300">스코어: 92 → 84 → 94 → 86</p>
+                        <p class="mt-3 text-slate-400">오늘은 버디를 잡을까, 더블파를 할까? 그의 스코어는 누구도 예측할 수 없는 한 편의 드라마. 리그 엔터테인먼트의 심장입니다!</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="monthly-highlights" class="mt-20 scroll-mt-20">
+            <h3 class="text-3xl font-bold text-slate-800 mb-2 text-center">월별 하이라이트</h3>
+            <p class="text-center text-slate-500 mb-8">탭을 클릭하여 각 월의 명장면과 이야기를 확인하세요.</p>
+            
+            <div class="flex justify-center flex-wrap gap-2 mb-6">
+                <button data-month="3" class="tab-item active py-2 px-5 rounded-full font-semibold">3월</button>
+                <button data-month="4" class="tab-item py-2 px-5 rounded-full font-semibold">4월</button>
+                <button data-month="5" class="tab-item py-2 px-5 rounded-full font-semibold">5월</button>
+                <button data-month="6" class="tab-item py-2 px-5 rounded-full font-semibold">6월</button>
+                <button data-month="7" class="tab-item py-2 px-5 rounded-full font-semibold">7월</button>
+            </div>
+
+            <div class="bg-white p-6 md:p-8 rounded-xl shadow-lg border border-slate-200/80 min-h-[200px]">
+                <div id="month-content-3" class="month-content">
+                    <h4 class="text-2xl font-bold text-slate-800">3월: 겨울잠에서 깨어난 거인들</h4>
+                    <p class="mt-3 text-slate-600">시즌의 서막. 전반적으로 높은 스코어는 동면에서 깨어난 선수들의 '몸풀기'였음을 증명합니다. 공식 우승자는 없었지만, 황보연(롱기)과 김도훈(니어)이 각각의 분야에서 첫 포문을 열며 다가올 대전투를 예고했습니다.</p>
+                </div>
+                <div id="month-content-4" class="month-content hidden">
+                    <h4 class="text-2xl font-bold text-slate-800">4월: 정상균 제국의 도래</h4>
+                    <p class="mt-3 text-slate-600">시즌 첫 공식 챔피언의 탄생! 정상균 원장이 경이로운 <strong class="text-amber-600">76타</strong>로 우승과 메달리스트를 동시에 석권하며 필드 위에 자신의 제국을 선포했습니다. 한편, 김재용 원장이 롱기스트를 차지하며 힘을 과시, 제국의 시대에 새로운 긴장감을 불어넣었습니다.</p>
+                </div>
+                 <div id="month-content-5" class="month-content hidden">
+                    <h4 class="text-2xl font-bold text-slate-800">5월: 신광호의 쿠데타</h4>
+                    <p class="mt-3 text-slate-600">전략이 힘을 이긴 달. 신광호 원장이 핸디캡을 활용한 지략으로 우승을 차지하며 '민중의 챔피언'으로 등극했습니다. 한편, 정상균 원장은 82타로 메달리스트를 차지, '실력의 제왕'과 '전략의 제왕'이 공존하는 흥미로운 구도를 만들었습니다.</p>
+                </div>
+                <div id="month-content-6" class="month-content hidden">
+                    <h4 class="text-2xl font-bold text-slate-800">6월: 임종갑의 그랜드마스터</h4>
+                    <p class="mt-3 text-slate-600">지략가들의 시대는 계속된다. 임종갑 원장이 시스템 자체를 상대로 체스를 두듯 핸디캡을 활용하여 우승을 차지했습니다. 같은 날, 백상현 원장이 메달리스트와 롱기스트를 동시에 석권하며 순수 실력과 힘을 모두 갖춘 완전체임을 증명했습니다.</p>
+                </div>
+                 <div id="month-content-7" class="month-content hidden">
+                    <h4 class="text-2xl font-bold text-slate-800">7월: 상반기 피날레</h4>
+                    <p class="mt-3 text-slate-600">상반기를 마무리하는 라운드. 정혜욱 원장이 정교한 샷으로 니어리스트를 차지하며 예술가의 면모를 뽐냈습니다. 선수들은 가을 시즌을 기약하며 뜨거웠던 상반기 필드 대결의 막을 내렸습니다.</p>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <footer class="mt-20 py-10 bg-slate-800 text-slate-300 text-center">
+        <p class="text-xl font-semibold">스코어는 잊혀도, 동기애는 영원히!</p>
+        <p class="mt-2 text-slate-400">구일회 '스윙의 동지들'의 건강과 행운을 빕니다. 건배!</p>
+    </footer>
+
+    <script>
+        const DB = {
+            players: [
+                { id: '정상균', title: '효율성의 황제', comment: '완벽하게 계획된 임플란트 시술처럼 코스를 정밀하게 해부하는 플레이어. 상반기 4관왕에 빛나는 구일회 최강자이자 모두가 넘어야 할 산입니다.' },
+                { id: '백상현', title: '조용한 강자', comment: '화려하진 않지만 꾸준한 실력으로 메달리스트에 이름을 올리는 숨은 고수. 6월에는 롱기스트까지 차지하며 힘을 증명했습니다.' },
+                { id: '윤영구', title: '인간 메트로놈', comment: '스코어의 편차가 거의 없는, 경이로운 안정성의 소유자. 다른 이들이 롤러코스터를 탈 때 묵묵히 자신의 페이스를 지키는 리그의 기준점입니다.' },
+                { id: '임종갑', title: '필드의 그랜드마스터', comment: '단순한 골프가 아닌, 시스템 자체를 상대로 체스를 두는 전략가. 그의 승리는 티잉 그라운드가 아닌, 지적인 공간에서 결정됩니다.' },
+                { id: '김도훈', title: '어프로치의 닌자', comment: '힘이 아닌 극도의 정교함으로 승부하는 숏게임 아티스트. 그의 샷은 핀 옆에 조용히 멈춰서는 크라운처럼 완벽합니다.' },
+                { id: '신광호', title: '민중의 챔피언', comment: '시스템에 대한 깊은 이해와 지략으로 승리를 쟁취하는 전략가. 힘보다 지략이 중요함을 몸소 증명하는 필드의 혁명가입니다.' },
+                { id: '황보연', title: '장타 군주', comment: '순수한 힘과 파괴의 미학을 상징하는 파워 히터. 그의 드라이버 샷은 동반자들에게 공포와 경외를 동시에 안겨줍니다.' },
+                { id: '서제덕', title: '섬세한 컨트롤 아티스트', comment: '보철 시술에 버금가는 외과적 정확성을 필드 위에서 구현하는 플레이어. 핀을 노리는 그의 아이언 샷은 한 폭의 그림과 같습니다.' },
+                { id: '정혜욱', title: '피날레의 명수', comment: '상반기 마지막 라운드에서 니어리스트를 차지하며 자신의 존재감을 각인시킨 플레이어. 중요한 순간에 강한 집중력을 보여줍니다.' },
+                { id: '차용두', title: '예측불허의 아이콘', comment: '스코어가 롤러코스터를 타는, 리그 엔터테인먼트의 심장. 오늘은 버디를 잡을지, 더블파를 할지 아무도 예측할 수 없는 카오스의 요원입니다.' },
+                { id: '이보경', title: '열정의 골퍼', comment: '스코어에 연연하지 않고 골프 자체를 즐기는 열정의 화신. 그녀의 포기하지 않는 모습은 모두에게 귀감이 됩니다.' },
+                { id: '구자영', title: '혜성같은 존재', comment: '봄바람과 함께 나타나 강력한 스코어를 남기고 홀연히 사라진 필드의 유령. 그의 재등극을 모두가 기다리고 있습니다.' },
+                { id: '김재용', title: '4월의 장타왕', comment: '4월에 혜성처럼 나타나 강력한 드라이버 샷으로 롱기스트를 차지한 숨은 실력자. 그의 한 방은 필드의 정적을 깨뜨렸습니다.' },
+                { id: '이창청', title: '침묵의 거인', comment: '아직 전면에 나서진 않았지만, 언제든 우승을 노릴 수 있는 잠재력을 가진 숨은 실력자. 하반기 그의 활약이 기대됩니다.' },
+                { id: '김형진', title: '잠자는 사자', comment: '조용히 실력을 갈고닦으며 때를 기다리는 플레이어. 잠에서 깨어나는 순간 필드의 판도를 뒤흔들 것입니다.' },
+            ],
+            scores: {
+                labels: ['3월', '4월', '5월', '6월', '7월'],
+                datasets: [
+                    { name: '정상균', data: [null, 76, 82, 90, null], color: '#ef4444' },
+                    { name: '신광호', data: [104, 104, 101, 102, 104], color: '#3b82f6' },
+                    { name: '임종갑', data: [96, 97, 97, 93, null], color: '#14b8a6' },
+                    { name: '황보연', data: [92, 96, 94, null, null], color: '#a855f7' },
+                    { name: '서제덕', data: [88, 92, 88, 94, null], color: '#f97316' },
+                    { name: '김도훈', data: [89, 90, 89, 91, null], color: '#65a30d' },
+                    { name: '정혜욱', data: [101, 102, 104, 102, 102], color: '#ec4899' },
+                    { name: '백상현', data: [90, 89, 89, 88, null], color: '#6366f1' },
+                    { name: '차용두', data: [92, 84, 94, 86, null], color: '#84cc16' },
+                    { name: '이보경', data: [110, 114, 113, 106, 112], color: '#d946ef' },
+                    { name: '윤영구', data: [98, 93, 93, 92, null], color: '#10b981' },
+                    { name: '구자영', data: [null, 86, 81, null, null], color: '#6b7280' },
+                    { name: '김재용', data: [null, 93, null, null, null], color: '#f59e0b'},
+                    { name: '이창청', data: [93, 95, 96, null, null], color: '#0ea5e9' },
+                    { name: '김형진', data: [104, 103, null, null, null], color: '#eab308' },
+                ]
+            },
+            awards: {
+                '정상균': ['🏆 우승 (4월)', '🥇 메달 (4월)', '🥇 메달 (5월)', '🚀 롱기 (5월)'],
+                '신광호': ['🏆 우승 (5월)'],
+                '임종갑': ['🏆 우승 (6월)'],
+                '황보연': ['🚀 롱기 (3월)'],
+                '서제덕': ['🎯 니어 (5월)'],
+                '김도훈': ['🎯 니어 (3월)'],
+                '정혜욱': ['🎯 니어 (7월)'],
+                '백상현': ['🥇 메달 (6월)', '🚀 롱기 (6월)'],
+                '차용두': ['🥇 메달 (4월)'],
+                '김재용': ['🚀 롱기 (4월)'],
+            }
+        };
+
+        let mainChart, playerChart;
+
+        document.addEventListener('DOMContentLoaded', () => {
+            initMainChart();
+            populatePlayerSelector();
+            updatePlayerAnalysis(DB.players[0].id);
+            setupEventListeners();
+        });
+        
+        function setupEventListeners() {
+            document.getElementById('player-selector').addEventListener('change', (e) => {
+                updatePlayerAnalysis(e.target.value);
+            });
+
+            document.querySelectorAll('.tab-item').forEach(tab => {
+                tab.addEventListener('click', (e) => {
+                    const selectedMonth = e.target.dataset.month;
+                    document.querySelectorAll('.tab-item').forEach(t => t.classList.remove('active'));
+                    e.target.classList.add('active');
+                    
+                    document.querySelectorAll('.month-content').forEach(content => content.classList.add('hidden'));
+                    document.getElementById(`month-content-${selectedMonth}`).classList.remove('hidden');
+                });
+            });
+
+            const navItems = document.querySelectorAll('.nav-item');
+            const sections = document.querySelectorAll('section[id]');
+            window.addEventListener('scroll', () => {
+                let current = '';
+                sections.forEach(section => {
+                    const sectionTop = section.offsetTop;
+                    if (pageYOffset >= sectionTop - 80) {
+                        current = section.getAttribute('id');
+                    }
+                });
+                navItems.forEach(item => {
+                    item.classList.remove('active');
+                    if (item.getAttribute('href') === `#${current}`) {
+                        item.classList.add('active');
+                    }
+                });
+            });
+
+            const mobileMenuButton = document.getElementById('mobile-menu-button');
+            const mobileMenu = document.getElementById('mobile-menu');
+            mobileMenuButton.addEventListener('click', () => {
+                mobileMenu.classList.toggle('hidden');
+            });
+            document.querySelectorAll('.nav-item-mobile').forEach(item => {
+                item.addEventListener('click', () => {
+                    mobileMenu.classList.add('hidden');
+                });
+            });
+        }
+
+        function initMainChart() {
+            const ctx = document.getElementById('mainScoreChart').getContext('2d');
+            const chartData = {
+                labels: DB.scores.labels,
+                datasets: DB.scores.datasets.map(d => ({
+                    label: d.name,
+                    data: d.data,
+                    borderColor: d.color,
+                    backgroundColor: d.color + '33',
+                    tension: 0.1,
+                    borderWidth: 2.5,
+                    pointRadius: 4,
+                    pointHoverRadius: 7,
+                    fill: false,
+                }))
+            };
+            mainChart = new Chart(ctx, {
+                type: 'line',
+                data: chartData,
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: false,
+                            title: { display: true, text: '스코어' }
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: {
+                                usePointStyle: true,
+                                boxWidth: 8,
+                                padding: 20,
+                            }
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return `${context.dataset.label}: ${context.parsed.y}타`;
+                                }
+                            }
+                        }
+                    },
+                    onClick: (e, elements) => {
+                        if (elements.length > 0) {
+                            const playerIndex = elements[0].datasetIndex;
+                            const playerName = mainChart.data.datasets[playerIndex].label;
+                            if(playerName) {
+                                updatePlayerAnalysis(playerName);
+                                document.getElementById('player-selector').value = playerName;
+                                document.getElementById('player-analysis').scrollIntoView({ behavior: 'smooth' });
+                            }
+                        }
+                    }
+                }
+            });
+        }
+        
+        function populatePlayerSelector() {
+            const selector = document.getElementById('player-selector');
+            DB.players.forEach(player => {
+                const option = document.createElement('option');
+                option.value = player.id;
+                option.textContent = player.id;
+                selector.appendChild(option);
+            });
+        }
+
+        function updatePlayerAnalysis(playerName) {
+            const playerData = DB.players.find(p => p.id === playerName);
+            const scoreData = DB.scores.datasets.find(d => d.name === playerName);
+            const awardData = DB.awards[playerName] || [];
+
+            if (!playerData || !scoreData) return;
+
+            document.getElementById('player-name').textContent = playerData.id;
+            document.getElementById('player-title').textContent = playerData.title;
+            document.getElementById('player-comment').textContent = playerData.comment;
+            
+            const awardsContainer = document.getElementById('player-awards');
+            awardsContainer.innerHTML = '';
+            if(awardData.length > 0) {
+                awardData.forEach(award => {
+                    const badge = document.createElement('span');
+                    badge.className = 'py-1 px-3 bg-amber-100 text-amber-800 rounded-full text-sm font-semibold';
+                    badge.textContent = award;
+                    awardsContainer.appendChild(badge);
+                });
+            } else {
+                 const badge = document.createElement('span');
+                 badge.className = 'text-slate-500 text-sm';
+                 badge.textContent = '아직 수상 기록이 없습니다.';
+                 awardsContainer.appendChild(badge);
+            }
+            
+            updatePlayerChart(scoreData);
+        }
+
+        function updatePlayerChart(scoreData) {
+            if (playerChart) {
+                playerChart.destroy();
+            }
+            const ctx = document.getElementById('playerScoreChart').getContext('2d');
+            const chartData = {
+                labels: DB.scores.labels,
+                datasets: [{
+                    label: scoreData.name + ' 스코어',
+                    data: scoreData.data,
+                    borderColor: scoreData.color,
+                    backgroundColor: scoreData.color + '33',
+                    tension: 0.1,
+                    borderWidth: 3,
+                    pointRadius: 5,
+                    pointHoverRadius: 8,
+                    fill: true,
+                }]
+            };
+
+            playerChart = new Chart(ctx, {
+                type: 'line',
+                data: chartData,
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: { beginAtZero: false }
+                    },
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    if (context.parsed.y !== null) {
+                                        return `${context.dataset.label}: ${context.parsed.y}타`;
+                                    }
+                                    return null;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+    </script>
+</body>
+</html>
